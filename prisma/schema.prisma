@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  BRANCH_ADMIN
+  PASTOR
+  SECRETARY
+  TREASURER
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  TRANSFERRED
+  DECEASED
+}
+
+enum ContributionType {
+  TITHE
+  OFFERING
+  PLEDGE
+  SPECIAL_DONATION
+}
+
+enum CommunicationType {
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum CommunicationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  address   String?
+  city      String?
+  state     String?
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  members           Member[]
+  families          Family[]
+  contributions     Contribution[]
+  expenses          Expense[]
+  attendances       Attendance[]
+  visitations       Visitation[]
+  volunteerRoles    VolunteerRole[]
+  volunteerAssignments VolunteerAssignment[]
+  communications    Communication[]
+  announcements     Announcement[]
+  followUps         FollowUp[]
+  targetAnnouncements Announcement[] @relation("TargetBranch")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      UserRole
+  isActive  Boolean  @default(true)
+  branchId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch             Branch            @relation(fields: [branchId], references: [id])
+  recordedContributions Contribution[]
+  approvedExpenses     Expense[]        @relation("ApprovedExpenses")
+  recordedExpenses     Expense[]        @relation("RecordedExpenses")
+  recordedAttendances  Attendance[]
+  conductedVisitations Visitation[]
+  assignedFollowUps    FollowUp[]
+  sentCommunications   Communication[]
+  createdAnnouncements Announcement[]
+}
+
+model Member {
+  id           String       @id @default(cuid())
+  firstName    String
+  lastName     String
+  middleName   String?
+  dateOfBirth  DateTime?
+  gender       String?
+  phone        String?
+  email        String?
+  address      String?
+  city         String?
+  state        String?
+  occupation   String?
+  maritalStatus String?
+  anniversaryDate DateTime?
+  photoUrl     String?
+  status       MemberStatus @default(ACTIVE)
+  joinedDate   DateTime?
+  notes        String?
+  branchId     String
+  familyId     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  branch            Branch           @relation(fields: [branchId], references: [id])
+  family            Family?          @relation(fields: [familyId], references: [id])
+  contributions     Contribution[]
+  attendances       Attendance[]
+  visitations       Visitation[]
+  volunteerAssignments VolunteerAssignment[]
+  followUps         FollowUp[]
+  communications    Communication[]
+
+  @@index([branchId])
+  @@index([familyId])
+  @@index([status])
+}
+
+model Family {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  branchId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch  Branch   @relation(fields: [branchId], references: [id])
+  members Member[]
+}
+
+model Contribution {
+  id             String           @id @default(cuid())
+  type           ContributionType
+  amount         Float
+  currency       String           @default("NGN")
+  date           DateTime
+  notes          String?
+  memberId       String
+  branchId       String
+  recordedById   String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  member   Member @relation(fields: [memberId], references: [id])
+  branch   Branch @relation(fields: [branchId], references: [id])
+  recordedBy User  @relation(fields: [recordedById], references: [id])
+
+  @@index([memberId])
+  @@index([branchId])
+  @@index([date])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  category    String
+  currency    String   @default("NGN")
+  date        DateTime
+  receiptUrl  String?
+  notes       String?
+  branchId    String
+  approvedById String?
+  recordedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch     Branch  @relation(fields: [branchId], references: [id])
+  approvedBy User?   @relation("ApprovedExpenses", fields: [approvedById], references: [id])
+  recordedBy User    @relation("RecordedExpenses", fields: [recordedById], references: [id])
+
+  @@index([branchId])
+  @@index([date])
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  date      DateTime
+  service   String?
+  memberId  String
+  branchId  String
+  recordedById String
+  createdAt DateTime @default(now())
+
+  member   Member @relation(fields: [memberId], references: [id])
+  branch   Branch @relation(fields: [branchId], references: [id])
+  recordedBy User  @relation(fields: [recordedById], references: [id])
+
+  @@unique([memberId, date, service])
+  @@index([branchId])
+  @@index([date])
+}
+
+model Visitation {
+  id          String   @id @default(cuid())
+  visitDate   DateTime
+  type        String
+  notes       String?
+  outcome     String?
+  memberId    String
+  visitedById String
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  member   Member @relation(fields: [memberId], references: [id])
+  visitedBy User   @relation(fields: [visitedById], references: [id])
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  @@index([memberId])
+  @@index([branchId])
+}
+
+model FollowUp {
+  id           String   @id @default(cuid())
+  type         String
+  notes        String?
+  status       String   @default("PENDING")
+  assignedToId String
+  memberId     String
+  branchId     String
+  dueDate      DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedTo User   @relation(fields: [assignedToId], references: [id])
+  member     Member @relation(fields: [memberId], references: [id])
+  branch     Branch @relation(fields: [branchId], references: [id])
+
+  @@index([assignedToId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model VolunteerRole {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch       Branch                 @relation(fields: [branchId], references: [id])
+  assignments  VolunteerAssignment[]
+}
+
+model VolunteerAssignment {
+  id             String   @id @default(cuid())
+  memberId       String
+  roleId         String
+  branchId       String
+  startDate      DateTime @default(now())
+  endDate        DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  member Member         @relation(fields: [memberId], references: [id])
+  role   VolunteerRole  @relation(fields: [roleId], references: [id])
+  branch Branch         @relation(fields: [branchId], references: [id])
+
+  @@unique([memberId, roleId])
+  @@index([branchId])
+}
+
+model Communication {
+  id          String             @id @default(cuid())
+  type        CommunicationType
+  recipient   String
+  subject     String?
+  message     String
+  status      CommunicationStatus @default(PENDING)
+  sentAt      DateTime?
+  errorLog    String?
+  memberId    String?
+  branchId    String
+  sentById    String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  member  Member? @relation(fields: [memberId], references: [id])
+  branch  Branch  @relation(fields: [branchId], references: [id])
+  sentBy  User    @relation(fields: [sentById], references: [id])
+
+  @@index([branchId])
+  @@index([status])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  priority  String   @default("NORMAL")
+  targetBranchId String?
+  createdById String
+  branchId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  targetBranch Branch? @relation("TargetBranch", fields: [targetBranchId], references: [id])
+  createdBy    User    @relation(fields: [createdById], references: [id])
+  branch      Branch   @relation(fields: [branchId], references: [id])
+
+  @@index([branchId])
+}
