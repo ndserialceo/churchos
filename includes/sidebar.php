@@ -1,4 +1,4 @@
-<div class="sidebar bg-dark text-white" id="sidebar">
+    <div class="sidebar bg-dark text-white" id="sidebar" role="navigation" aria-label="Main navigation">
         <div class="sidebar-heading text-center py-4 fs-4 fw-bold border-bottom border-secondary">
             <i class="bi bi-cross"></i> ChurchOS
         </div>
@@ -47,7 +47,7 @@
     </div>
 
     <!-- Offcanvas for mobile -->
-    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar">
+    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="offcanvasSidebar" aria-label="Mobile navigation">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title text-white"><i class="bi bi-cross"></i> ChurchOS</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>

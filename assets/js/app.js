@@ -80,6 +80,7 @@ function showToast(message, type) {
         const div = document.createElement('div');
         div.id = 'toast-container';
         div.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        div.setAttribute('aria-live', 'polite');
         document.body.appendChild(div);
     }
 
@@ -89,11 +90,19 @@ function showToast(message, type) {
     toastEl.setAttribute('aria-live', 'assertive');
     toastEl.setAttribute('aria-atomic', 'true');
 
-    toastEl.innerHTML =
-        '<div class="d-flex">' +
-            '<div class="toast-body">' + message + '</div>' +
-            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>' +
-        '</div>';
+    const bodyDiv = document.createElement('div');
+    bodyDiv.className = 'd-flex';
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'toast-body';
+    msgDiv.textContent = message;
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+    closeBtn.setAttribute('data-bs-dismiss', 'toast');
+    closeBtn.setAttribute('aria-label', 'Close');
+    bodyDiv.appendChild(msgDiv);
+    bodyDiv.appendChild(closeBtn);
+    toastEl.appendChild(bodyDiv);
 
     document.getElementById('toast-container').appendChild(toastEl);
 

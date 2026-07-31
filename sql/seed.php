@@ -25,14 +25,14 @@ if ($check > 0) {
 echo "✓ Branches already in database\n";
 
 // Create users with proper password hashes
-$password = password_hash('admin123', PASSWORD_DEFAULT);
+$password = password_hash('Admin123!', PASSWORD_DEFAULT);
 
 $stmt = $db->prepare("INSERT INTO users (email, password, first_name, last_name, role, branch_id) VALUES (?, ?, ?, ?, ?, ?)");
 $stmt->execute(['admin@churchos.org', $password, 'Super', 'Admin', 'SUPER_ADMIN', 1]);
-echo "✓ Created Super Admin: admin@churchos.org / admin123\n";
+echo "✓ Created Super Admin: admin@churchos.org / Admin123!\n";
 
 $stmt->execute(['lagos@churchos.org', $password, 'Lagos', 'Admin', 'BRANCH_ADMIN', 2]);
-echo "✓ Created Branch Admin: lagos@churchos.org / admin123\n";
+echo "✓ Created Branch Admin: lagos@churchos.org / Admin123!\n";
 
 // Members (if not already inserted)
 $memberCount = $db->query("SELECT COUNT(*) FROM members")->fetchColumn();
@@ -59,6 +59,6 @@ if ($roleCount == 0) {
 
 echo "\n✅ Seeding complete!\n";
 echo "\nLogin credentials:\n";
-echo "  Super Admin: admin@churchos.org / admin123\n";
-echo "  Branch Admin: lagos@churchos.org / admin123\n";
+echo "  Super Admin: admin@churchos.org / Admin123!\n";
+echo "  Branch Admin: lagos@churchos.org / Admin123!\n";
 echo "</pre>";

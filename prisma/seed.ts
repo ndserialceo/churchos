@@ -30,7 +30,7 @@ async function main() {
     },
   })
 
-  const password = await bcrypt.hash("admin123", 12)
+  const password = await bcrypt.hash("Admin123!", 12)
 
   const superAdmin = await prisma.user.upsert({
     where: { email: "admin@churchos.org" },
@@ -113,8 +113,8 @@ async function main() {
 
   console.log("Seed completed successfully")
   console.log("Login credentials:")
-  console.log("  Super Admin: admin@churchos.org / admin123")
-  console.log("  Branch Admin: lagos@churchos.org / admin123")
+  console.log("  Super Admin: admin@churchos.org / Admin123!")
+  console.log("  Branch Admin: lagos@churchos.org / Admin123!")
 }
 
 main()

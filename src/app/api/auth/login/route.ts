@@ -1,63 +1,70 @@
 import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyPassword, signToken } from "@/lib/auth"
-import { successResponse, errorResponse } from "@/lib/api-utils"
+import {
+  verifyPassword,
+  signAccessToken,
+  createRefreshToken,
+  getCsrfToken,
+  getCookieOptions,
+  getCsrfCookieOptions,
+  logAudit,
+} from "@/lib/auth"
+import { validateRequest, loginSchema } from "@/lib/validation"
+import { successResponse, errorResponse, handleApiError } from "@/lib/api-utils"
+import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    const validation = validateRequest(loginSchema, body)
+    if (!validation.success) return errorResponse(validation.error)
 
-    if (!email || !password) {
-      return errorResponse("Email and password are required")
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { branch: true },
-    })
+    const { email, password } = validation.data
+    const user = await prisma.user.findUnique({ where: { email } })
 
     if (!user || !user.isActive) {
-      return errorResponse("Invalid credentials", 401)
+      return errorResponse("Invalid email or password", 401)
     }
 
-    const isValid = await verifyPassword(password, user.password)
-    if (!isValid) {
-      return errorResponse("Invalid credentials", 401)
+    const valid = await verifyPassword(password, user.password)
+    if (!valid) {
+      return errorResponse("Invalid email or password", 401)
     }
 
-    const token = signToken({
+    const payload = { userId: user.id, email: user.email, role: user.role, branchId: user.branchId }
+    const accessToken = signAccessToken(payload)
+    const refreshToken = await createRefreshToken(user.id)
+    const csrfToken = getCsrfToken()
+
+    const cookieStore = await cookies()
+    cookieStore.set("cs_access", accessToken, getCookieOptions(15 * 60))
+    cookieStore.set("cs_refresh", refreshToken, getCookieOptions(7 * 24 * 60 * 60))
+    cookieStore.set("cs_csrf", csrfToken, getCsrfCookieOptions(7 * 24 * 60 * 60))
+
+    const forwarded = request.headers.get("x-forwarded-for")
+    const ip = forwarded?.split(",")[0]?.trim() || "unknown"
+
+    await logAudit({
       userId: user.id,
-      email: user.email,
-      role: user.role,
       branchId: user.branchId,
+      action: "LOGIN",
+      entity: "User",
+      entityId: user.id,
+      ipAddress: ip,
+      userAgent: request.headers.get("user-agent") || undefined,
     })
 
-    const response = successResponse({
-      token,
+    return successResponse({
       user: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        branch: {
-          id: user.branch.id,
-          name: user.branch.name,
-          code: user.branch.code,
-        },
+        branchId: user.branchId,
       },
     })
-
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60,
-      path: "/",
-    })
-
-    return response
   } catch (error) {
-    return errorResponse("Login failed", 500)
+    return handleApiError(error)
   }
 }

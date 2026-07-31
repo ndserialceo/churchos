@@ -37,7 +37,10 @@ CREATE TABLE users (
     branch_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (branch_id) REFERENCES branches(id)
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_users_branch (branch_id),
+    INDEX idx_users_role (role),
+    INDEX idx_users_active (is_active)
 ) ENGINE=InnoDB;
 
 -- Members
@@ -64,8 +67,14 @@ CREATE TABLE members (
     family_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_members_branch (branch_id),
-    INDEX idx_members_status (status)
+    INDEX idx_members_status (status),
+    INDEX idx_members_family (family_id),
+    INDEX idx_members_email (email),
+    INDEX idx_members_phone (phone),
+    INDEX idx_members_name (last_name, first_name)
 ) ENGINE=InnoDB;
 
 -- Families
@@ -77,7 +86,7 @@ CREATE TABLE families (
     branch_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (branch_id) REFERENCES branches(id)
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 -- Contributions
@@ -93,9 +102,14 @@ CREATE TABLE contributions (
     recorded_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_contributions_member (member_id),
     INDEX idx_contributions_branch (branch_id),
-    INDEX idx_contributions_date (date)
+    INDEX idx_contributions_date (date),
+    INDEX idx_contributions_type (type),
+    INDEX idx_contributions_recorded_by (recorded_by)
 ) ENGINE=InnoDB;
 
 -- Expenses
@@ -113,8 +127,13 @@ CREATE TABLE expenses (
     recorded_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     INDEX idx_expenses_branch (branch_id),
-    INDEX idx_expenses_date (date)
+    INDEX idx_expenses_date (date),
+    INDEX idx_expenses_category (category),
+    INDEX idx_expenses_recorded_by (recorded_by)
 ) ENGINE=InnoDB;
 
 -- Attendance
@@ -126,7 +145,13 @@ CREATE TABLE attendance (
     branch_id INT NOT NULL,
     recorded_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_attendance (member_id, date, service)
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    UNIQUE KEY uk_attendance (member_id, date, service),
+    INDEX idx_attendance_branch (branch_id),
+    INDEX idx_attendance_date (date),
+    INDEX idx_attendance_recorded_by (recorded_by)
 ) ENGINE=InnoDB;
 
 -- Visitations
@@ -140,7 +165,13 @@ CREATE TABLE visitations (
     visited_by INT NOT NULL,
     branch_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (visited_by) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_visitations_member (member_id),
+    INDEX idx_visitations_branch (branch_id),
+    INDEX idx_visitations_date (visit_date)
 ) ENGINE=InnoDB;
 
 -- Follow Ups
@@ -156,7 +187,14 @@ CREATE TABLE follow_ups (
     completed_at DATETIME,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_followups_status (status)
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_followups_status (status),
+    INDEX idx_followups_assigned (assigned_to),
+    INDEX idx_followups_member (member_id),
+    INDEX idx_followups_branch (branch_id),
+    INDEX idx_followups_due_date (due_date)
 ) ENGINE=InnoDB;
 
 -- Volunteer Roles
@@ -166,7 +204,9 @@ CREATE TABLE volunteer_roles (
     description TEXT,
     branch_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_volunteer_roles_branch (branch_id)
 ) ENGINE=InnoDB;
 
 -- Volunteer Assignments
@@ -180,7 +220,12 @@ CREATE TABLE volunteer_assignments (
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_volunteer (member_id, role_id)
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES volunteer_roles(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    UNIQUE KEY uk_volunteer (member_id, role_id),
+    INDEX idx_volunteer_assign_branch (branch_id),
+    INDEX idx_volunteer_assign_active (is_active)
 ) ENGINE=InnoDB;
 
 -- Communications
@@ -198,7 +243,13 @@ CREATE TABLE communications (
     sent_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_communications_status (status)
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_communications_status (status),
+    INDEX idx_communications_branch (branch_id),
+    INDEX idx_communications_member (member_id),
+    INDEX idx_communications_type (type)
 ) ENGINE=InnoDB;
 
 -- Announcements
@@ -211,7 +262,33 @@ CREATE TABLE announcements (
     created_by INT NOT NULL,
     branch_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (target_branch_id) REFERENCES branches(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_announcements_branch (branch_id),
+    INDEX idx_announcements_priority (priority)
+) ENGINE=InnoDB;
+
+-- Audit Logs (for parity with Next.js stack)
+CREATE TABLE audit_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    branch_id INT NULL,
+    action VARCHAR(100) NOT NULL,
+    entity VARCHAR(100) NOT NULL,
+    entity_id VARCHAR(100),
+    old_values JSON,
+    new_values JSON,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_audit_user (user_id),
+    INDEX idx_audit_branch (branch_id),
+    INDEX idx_audit_entity (entity, entity_id),
+    INDEX idx_audit_created (created_at)
 ) ENGINE=InnoDB;
 
 -- Seed Branches

@@ -181,8 +181,8 @@
 }
 
 @media (min-width: 768px) {
-    .offcanvas-start {
-        visibility: hidden !important;
+    .offcanvas {
+        display: none !important;
     }
 }
 
