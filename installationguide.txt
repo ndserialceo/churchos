@@ -1,0 +1,259 @@
+================================================================================
+                    CHURCHOS DEPLOYMENT GUIDE - BABY STEPS
+================================================================================
+
+A complete beginner-friendly guide to deploying ChurchOS on your computer
+or on the internet.
+
+================================================================================
+                         WHAT YOU NEED FIRST
+================================================================================
+
+Before touching any code, install these 4 things on your computer:
+
+1. NODE.JS (runs the modern Next.js app)
+   - Go to https://nodejs.org
+   - Download the LTS version (green button)
+   - Run the installer, click "Next" through everything
+   - Verify it worked: open Command Prompt, type: node -v
+   - You should see something like v20.x.x
+
+2. XAMPP (runs the PHP app + MySQL database)
+   - Go to https://www.apachefriends.org
+   - Download XAMPP for Windows
+   - Run the installer, keep all defaults, install
+   - Open XAMPP Control Panel, click Start next to Apache and MySQL
+
+3. POSTGRESQL (database for the modern app)
+   - Go to https://www.postgresql.org/download/windows/
+   - Download and run the installer
+   - During install, set a PASSWORD - write it down somewhere safe
+   - Keep all other defaults, finish installing
+   - Remember the port number (default is 5432)
+
+4. A CODE EDITOR (to edit config files)
+   - Download VS Code from https://code.visualstudio.com
+   - Install it with defaults
+
+================================================================================
+                   PART A: SET UP THE PHP/MySQL VERSION
+================================================================================
+
+Step 1:  Open the XAMPP Control Panel.
+         Make sure Apache and MySQL are running (green buttons).
+
+Step 2:  Open phpMyAdmin in your browser:
+         Go to http://localhost/phpmyadmin
+
+Step 3:  Create the database:
+         - Click "New" on the left sidebar
+         - Type "churchos" in the database name field
+         - Click "Create"
+
+Step 4:  Import the database schema:
+         - Click on the "churchos" database on the left
+         - Click the "Import" tab at the top
+         - Click "Choose File"
+         - Navigate to the folder: churchos/sql/schema.sql
+         - Click "Go" at the bottom
+
+Step 5:  Seed the database (create default users):
+         - Open your browser
+         - Go to http://localhost/churchos/sql/seed.php
+         - You should see "Seeding complete!" with login credentials
+
+Step 6:  Open ChurchOS PHP version in your browser:
+         - Go to http://localhost/churchos/
+         - You should see the login page
+         - Login with: admin@churchos.org / Admin123!
+
+================================================================================
+               PART B: SET UP THE Next.js/PostgreSQL VERSION
+================================================================================
+
+Step 1:  Open Command Prompt or PowerShell
+
+Step 2:  Navigate to the project folder:
+         cd "C:\Users\ndukw\OneDrive\Documents\Default Project\ChurchOS\churchos"
+
+Step 3:  Create the PostgreSQL database:
+         - Open pgAdmin (installed with PostgreSQL) or use command line
+         - Connect to PostgreSQL (use the password you set during install)
+         - Create a new database called "churchos"
+
+Step 4:  Create the .env file:
+         - In the project folder, find .env.example
+         - Copy it and rename the copy to .env
+         - Open .env in VS Code and edit these lines:
+
+           DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/churchos"
+           JWT_SECRET="any-random-string-at-least-32-characters-long-here"
+
+         - Replace YOUR_PASSWORD with your PostgreSQL password
+         - Replace the JWT_SECRET with any random long string
+
+Step 5:  Install dependencies (wait 2-3 minutes):
+         npm install
+
+Step 6:  Set up the database schema:
+         npx prisma migrate dev
+         When prompted, type a name like "init" and press Enter.
+
+Step 7:  Seed the database (create default users):
+         npm run db:seed
+
+Step 8:  Start the app:
+         npm run dev
+
+Step 9:  Open in your browser:
+         - Go to http://localhost:3000
+         - Login with: admin@churchos.org / Admin123!
+
+================================================================================
+                     FOR PRODUCTION (REAL WEBSITE)
+================================================================================
+
+If you want to put this on the internet for real users, you have two options:
+
+OPTION 1: VERCEL (easiest for Next.js)
+---------------------------------------
+
+1.  Create a free account at https://vercel.com
+2.  Push your code to GitHub first (create a free GitHub account if needed)
+3.  In Vercel, click "New Project"
+4.  Import from GitHub (select the churchos repository)
+5.  Add your environment variables:
+      - DATABASE_URL (use a cloud PostgreSQL like Supabase or Neon)
+      - JWT_SECRET (generate a strong random string)
+      - AFRICASTALKING_API_KEY (from africastalking.com)
+      - AFRICASTALKING_USERNAME (sandbox or your username)
+6.  Click Deploy - done, your site is live!
+
+OPTION 2: A VPS SERVER (for both PHP and Next.js)
+--------------------------------------------------
+
+1.  Get a server from DigitalOcean, Hetzner, or AWS ($5-10/month)
+2.  Install Node.js, PostgreSQL, and Nginx on the server
+3.  Upload your code via Git:
+      git clone https://github.com/ndserialceo/churchos.git
+4.  Set up the database:
+      npx prisma migrate deploy
+      npm run db:seed
+5.  Build and start:
+      npm install
+      npm run build
+      npm start
+6.  Configure Nginx to point your domain to the app
+
+================================================================================
+                       IMPORTANT PRODUCTION STEPS
+================================================================================
+
+Before going live, you MUST do these things:
+
+1.  Change the JWT_SECRET to a strong random string
+    Generate one with: openssl rand -base64 48
+
+2.  Change ALL default passwords immediately
+    The seed password "Admin123!" is public knowledge
+
+3.  Use HTTPS (SSL certificates)
+    - Free from Let's Encrypt: https://letsencrypt.org
+    - Or use Cloudflare as a free CDN/proxy
+
+4.  Set up a real database
+    - Don't use the local PostgreSQL for production
+    - Use Supabase (free tier), Neon (free tier), or Railway
+
+5.  Set the database password to something strong
+    Don't use "postgres" as the password
+
+6.  Remove or protect the seed file
+    Delete sql/seed.php from production
+
+7.  Set APP_ENV to production in your .env file:
+    APP_ENV=production
+
+================================================================================
+                         TROUBLESHOOTING
+================================================================================
+
+Problem: "Command not found: node"
+  Solution: Node.js is not installed or not in PATH.
+            Restart your terminal after installing Node.js.
+
+Problem: "Command not found: npx"
+  Solution: Same as above. npx comes with Node.js.
+
+Problem: "Cannot connect to database"
+  Solution: Make sure PostgreSQL is running.
+            Check your password in .env is correct.
+            Make sure the port matches (default 5432).
+
+Problem: "PHP pages show 404"
+  Solution: Make sure Apache is running in XAMPP.
+            Make sure the .htaccess file is in the churchos folder.
+
+Problem: "Next.js build fails"
+  Solution: Run: rm -rf .next
+            Then run: npm run dev
+
+Problem: "Permission denied"
+  Solution: On Mac/Linux, you may need sudo.
+            On Windows, run Command Prompt as Administrator.
+
+================================================================================
+                       USEFUL COMMANDS REFERENCE
+================================================================================
+
+PHP Stack:
+  Start XAMPP:        Open XAMPP Control Panel, click Start
+  Stop XAMPP:         Open XAMPP Control Panel, click Stop
+  Open phpMyAdmin:    http://localhost/phpmyadmin
+  Open ChurchOS:      http://localhost/churchos/
+
+Next.js Stack:
+  Install deps:       npm install
+  Start dev:          npm run dev
+  Build for prod:     npm run build
+  Start prod:         npm run start
+  Database migrate:   npx prisma migrate dev
+  Database seed:      npm run db:seed
+  Database studio:    npm run db:studio
+  Type check:         npx tsc --noEmit
+  Lint code:          npx eslint src/
+
+Git:
+  Check status:       git status
+  Stage all files:    git add -A
+  Commit changes:     git commit -m "message"
+  Push to GitHub:     git push origin master
+  Pull from GitHub:   git pull origin master
+
+================================================================================
+                         DEFAULT LOGIN CREDENTIALS
+================================================================================
+
+Super Admin:
+  Email:    admin@churchos.org
+  Password: Admin123!
+
+Branch Admin:
+  Email:    lagos@churchos.org
+  Password: Admin123!
+
+IMPORTANT: Change these passwords immediately in production!
+
+================================================================================
+                         SUPPORT & RESOURCES
+================================================================================
+
+  GitHub:     https://github.com/ndserialceo/churchos
+  Next.js:    https://nextjs.org/docs
+  Prisma:     https://www.prisma.io/docs
+  Bootstrap:  https://getbootstrap.com/docs/5.3/
+  Tailwind:   https://tailwindcss.com/docs
+
+================================================================================
+                          END OF GUIDE
+================================================================================
